@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, path::PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Result, anyhow};
 use fossick::{FossickedData, Fossicker};
 use futures::future::join_all;
 use hashbrown::HashMap;
@@ -23,6 +23,10 @@ pub mod runner;
 mod serve;
 mod service;
 mod utils;
+
+pub struct IndexCatalogueRepresentation {
+    entries: Vec<(String, String)>
+}
 
 struct SearchState {
     options: SearchOptions,
@@ -301,6 +305,19 @@ impl SearchState {
         output::write_common_to_disk(index_entries, &outdir).await;
 
         outdir
+    }
+
+    pub async fn get_index_catalogue(&self) -> Result<IndexCatalogueRepresentation> {
+        if self.built_indexes.is_empty() {
+            return Err(anyhow!("Indexes empty, are they built yet? (run get_files/write_files)"));
+        }
+        let entries: Vec<(String, String)> = self
+            .built_indexes
+            .iter()
+            .map(|indexes| indexes.fragments.clone()
+                .into_iter()
+            ).flatten().collect();
+        Ok(IndexCatalogueRepresentation { entries })
     }
 
     pub async fn get_files(&self) -> Vec<SyntheticFile> {
