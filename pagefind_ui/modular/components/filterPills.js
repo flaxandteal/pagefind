@@ -9,7 +9,7 @@ export class FilterPills {
         this.instance = null;
         this.wrapper = null;
         this.pillContainer = null;
-        this.available = {};
+        this.available = [];
         this.selected = ["All"];
         this.total = 0;
         this.filterMemo = "";
@@ -18,6 +18,12 @@ export class FilterPills {
         this.ordering = opts.ordering ?? null;
         this.alwaysShow = opts.alwaysShow ?? false;
         this.selectMultiple = opts.selectMultiple ?? false;
+        this.pillInner = opts.pillInner ?? this.defaultPillInner;
+        this.makeFilterElement = opts.makeFilterElement ?? (
+            () => new El("button")
+                .class("pagefind-modular-filter-pill")
+                .attrs({"type": "button"})
+        );
 
         if (!this.filter?.length) {
             console.error(`[Pagefind FilterPills component]: No filter option supplied, nothing to display`);
@@ -83,7 +89,7 @@ export class FilterPills {
         this.instance.triggerFilter(this.filter, selected);
     }
 
-    pillInner(val, count) {
+    defaultPillInner(val, count) {
         if (this.total) {
             return `<span aria-label="${val}">${val} (${count})</span>`;
         } else {
@@ -93,12 +99,10 @@ export class FilterPills {
 
     renderNew() {
         this.available.forEach(([val, count]) => {
-            new El("button")
-                .class("pagefind-modular-filter-pill")
+            this.makeFilterElement()
                 .html(this.pillInner(val, count))
                 .attrs({
                     "aria-pressed": this.selected.includes(val),
-                    "type": "button",
                 })
                 .handle("click", () => {
                     if (val === "All") {

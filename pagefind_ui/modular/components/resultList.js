@@ -96,7 +96,7 @@ class Result {
         if (!this.placeholderNodes?.length) return;
 
         this.result = await this.rawResult.data();
-        const resultTemplate = this.resultFn(this.result);
+        const resultTemplate = await this.resultFn(this.result);
         const resultNodes = templateNodes(resultTemplate);
 
         while (this.placeholderNodes.length > 1) {
@@ -113,7 +113,8 @@ export class ResultList {
         this.containerEl = null;
         this.results = [];
         this.placeholderTemplate = opts.placeholderTemplate ?? placeholderTemplate;
-        this.resultTemplate = opts.resultTemplate ?? resultTemplate;
+        this.defaultResultTemplate = resultTemplate;
+        this.resultTemplate = opts.resultTemplate ?? this.defaultResultTemplate;
 
         if (opts.containerElement) {
             this.initContainer(opts.containerElement);

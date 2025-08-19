@@ -49,11 +49,7 @@ pagefind_stem = { version = "0.2.0", features = [
     "yiddish",
 ] }
 convert_case = "0.6.0"
-charabia = { version = "0.9.3", optional = true, default-features = false, features = [
-    "chinese",
-    "japanese",
-    "thai",
-] }
+charabia = { version = "0.9.6", optional = true, default-features = false, features = ["chinese", "japanese", "thai"], git = "https://github.com/meilisearch/charabia" }
 unicode-segmentation = "1.10.1"
 emojis = "0.6.1"
 hashbrown = { version = "0.13.1", features = ["serde"] }
@@ -90,3 +86,6 @@ typed-builder = "0.20.0"
 [features]
 
 extended = ["dep:charabia"]
+
+[patch.crates-io]
+jieba-rs = { git = 'https://github.com/meilisearch/charabia', branch = 'main' }

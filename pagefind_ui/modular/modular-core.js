@@ -2,6 +2,7 @@ export { Input } from "./components/input";
 export { ResultList } from "./components/resultList";
 export { Summary } from "./components/summary";
 export { FilterPills } from "./components/filterPills";
+export * as ElementBuilder from "./helpers/element-builder";
 
 const sleep = async (ms = 50) =>
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -35,6 +36,9 @@ export class Instance {
     this.searchTerm = "";
     this.searchFilters = {};
     this.searchResult = {};
+    this.searchAction = opts.searchAction || (
+      async (pagefind, term, { filters }) => pagefind.search(term, { filters })
+    );
     this.availableFilters = null;
     this.totalFilters = null;
 
@@ -45,6 +49,7 @@ export class Instance {
       //TODO: USE processTerm: opts.processTerm ?? null,
       mergeIndex: opts.mergeIndex ?? [],
       //TODO: USE translations: opts.translations ?? [],
+      allowEmptySearch: opts.allowEmptySearch ?? false,
     };
 
     delete opts["bundlePath"];
@@ -54,6 +59,7 @@ export class Instance {
     delete opts["debounceTimeoutMs"];
     delete opts["mergeIndex"];
     delete opts["translations"];
+    delete opts["allowEmptySearch"];
 
     // Remove the UI-specific config before passing it along to the Pagefind backend
     this.pagefindOptions = opts;
@@ -84,6 +90,11 @@ export class Instance {
   triggerLoad() {
     this.__load__();
     // this.components.forEach(component => component?.triggerLoad?.());
+  }
+
+  retriggerSearch() {
+    this.__dispatch__("search", this.searchTerm, this.searchFilters);
+    this.__search__(this.searchTerm, this.searchFilters);
   }
 
   triggerSearch(term) {
@@ -131,11 +142,11 @@ export class Instance {
     await this.__load__();
     const thisSearch = ++this.__searchID__;
 
-    if (!term || !term.length) {
+    if (!this.options.allowEmptySearch && (!term || !term.length)) {
       return this.__clear__();
     }
 
-    const results = await this.__pagefind__.search(term, { filters });
+    const results = await this.searchAction(this.__pagefind__, term, { filters });
     if (results && this.__searchID__ === thisSearch) {
       if (results.filters && Object.keys(results.filters)?.length) {
         this.availableFilters = results.filters;
