@@ -1,4 +1,5 @@
-# Simplified release workflow for fork - builds and publishes binaries to GitHub Releases
+# Based on: https://github.com/ClementTsang/bottom/blob/master/.github/workflows/deployment.yml
+
 name: Fork Release
 
 on:
@@ -12,8 +13,11 @@ env:
 
 jobs:
   test-and-build:
-    name: Build ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
+    name: Build
+    runs-on: ${{matrix.os}}
+    defaults:
+      run:
+        shell: bash
     strategy:
       matrix:
         include:
@@ -21,25 +25,37 @@ jobs:
             os: windows-latest
             rust: stable
             target: x86_64-pc-windows-msvc
+            cross: false
+            run_tests: true
           - build: linux
             os: ubuntu-latest
             rust: stable
             target: x86_64-unknown-linux-musl
-          - build: linux-arm
+            cross: false
+            run_tests: true
+          - build: linux
             os: ubuntu-latest
             rust: stable
             target: aarch64-unknown-linux-musl
+            cross: false
+            run_tests: false
           - build: macos
             os: macos-latest
             rust: stable
             target: x86_64-apple-darwin
+            cross: false
+            run_tests: true
           - build: macos-m1
             os: macos-latest
             rust: stable
             target: aarch64-apple-darwin
+            cross: false
+            run_tests: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Cache
         uses: actions/cache@v4
@@ -55,16 +71,28 @@ jobs:
         with:
           node-version: 20
 
+      # From https://github.com/Emoun/duplicate/blob/master/.github/workflows/rust.yml
       - name: Get Version
         run: echo GIT_VERSION="$(git describe --tags | sed 's/^v\(.*\)$/\1/')" >> $GITHUB_ENV
-        shell: bash
 
+      - name: Get Tag
+        run: echo GIT_TAG="$(node ./.backstage/get_tag.cjs)" >> $GITHUB_ENV
+
+      - name: Verify Changelog
+        if: env.GIT_TAG == 'latest'
+        run: |
+          node ./.backstage/changelog.cjs
+
+      - name: Install Linker
+        if: matrix.cross
+        run: |
+          sudo apt update
+          sudo apt install ${{ matrix.linker }}
       - name: Install MUSL Tooling
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt update -y
           sudo apt install -y musl-tools musl-dev
-
       - name: Install aarch64 Tooling
         if: matrix.target == 'aarch64-unknown-linux-musl'
         run: |
@@ -95,25 +123,30 @@ jobs:
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
         with:
-          version: ${{ env.WASM_PACK_VERSION }}
+          version: ${{env.WASM_PACK_VERSION}}
+
+      - name: Set up python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Prepare Git
         run: |
           git config user.email "github@github.com"
           git config user.name "Github Actions"
           git checkout -b main
+          # Use throw-away branch so we don't push the changes to origin
           git checkout -b deploy_branch
-        shell: bash
-
       - name: Prepare Crates
         run: |
+          # Update cargo version,
           node ./.backstage/version.cjs
           git add ./pagefind/Cargo.toml
           git add ./pagefind_web/Cargo.toml
           git add ./pagefind_ui/default/package.json
           git add ./pagefind_ui/modular/package.json
+          # Commit changes so cargo doesn't complain about dirty repo
           git commit -m "Deploy changes."
-        shell: bash
 
       - name: Build Coupled JS
         working-directory: ./pagefind_web_js
@@ -122,7 +155,6 @@ jobs:
       - name: Build WASM
         working-directory: ./pagefind_web
         run: ./local_build.sh
-        shell: bash
 
       - name: Build UI
         working-directory: ./pagefind_ui/default
@@ -136,9 +168,66 @@ jobs:
         working-directory: ./pagefind_playground
         run: npm i && npm run build
 
+      - name: Test Web
+        if: matrix.run_tests == true
+        working-directory: ./pagefind_web
+        run: cargo test --release
+
       - name: Build
         working-directory: ./pagefind
         run: cargo build --release --target ${{ matrix.target }} --features extended
+
+      - name: Test Lib
+        if: matrix.run_tests == true
+        working-directory: ./pagefind
+        run: cargo test --release --target ${{ matrix.target }} --features extended
+
+      - name: Test CLI
+        if: matrix.run_tests == true
+        run: npx -y toolproof@latest -s -c 1 --timeout 45 --placeholders pagefind_mode="${{ matrix.target }}/release"
+
+      - name: Move extended binary aside
+        run: |
+          cp target/${{ matrix.target }}/release/pagefind target/${{ matrix.target }}/release/pagefind_extended
+
+      - name: Build Non-Extended
+        working-directory: ./pagefind
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Create Standard Release
+        run: |
+          EXEC_NAME="pagefind"
+          ASSET_PATH="$EXEC_NAME-v$GIT_VERSION-${{ matrix.target }}.tar.gz"
+          CHECKSUM_PATH="$ASSET_PATH.sha256"
+
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            EXEC_NAME="pagefind.exe"
+          fi
+
+          tar czf $ASSET_PATH -C target/${{ matrix.target }}/release $EXEC_NAME
+
+          if command -v gtar &> /dev/null; then
+            echo "Using gtar"
+            gtar czf $ASSET_PATH -C target/${{ matrix.target }}/release $EXEC_NAME
+          else
+            echo "Using system tar"
+            tar czf $ASSET_PATH -C target/${{ matrix.target }}/release $EXEC_NAME
+          fi
+
+          case $RUNNER_OS in
+              Windows)
+                  sha256sum $ASSET_PATH > $CHECKSUM_PATH
+                  ;;
+              Linux)
+                  sha256sum $ASSET_PATH > $CHECKSUM_PATH
+                  ;;
+              macOS)
+                  shasum -a 256 $ASSET_PATH > $CHECKSUM_PATH
+                  ;;
+          esac
+
+          echo "ASSET_PATH=$ASSET_PATH" >> $GITHUB_ENV
+          echo "CHECKSUM_PATH=$CHECKSUM_PATH" >> $GITHUB_ENV
 
       - name: Create Extended Release
         run: |
@@ -170,9 +259,8 @@ jobs:
                   ;;
           esac
 
-          echo "ASSET_PATH=$ASSET_PATH" >> $GITHUB_ENV
-          echo "CHECKSUM_PATH=$CHECKSUM_PATH" >> $GITHUB_ENV
-        shell: bash
+          echo "EXTENDED_ASSET_PATH=$ASSET_PATH" >> $GITHUB_ENV
+          echo "EXTENDED_CHECKSUM_PATH=$CHECKSUM_PATH" >> $GITHUB_ENV
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -181,6 +269,15 @@ jobs:
           path: |
             ${{ env.ASSET_PATH }}
             ${{ env.CHECKSUM_PATH }}
+            ${{ env.EXTENDED_ASSET_PATH }}
+            ${{ env.EXTENDED_CHECKSUM_PATH }}
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-checksums-${{ matrix.target }}
+          path: |
+            ${{ env.CHECKSUM_PATH }}
+            ${{ env.EXTENDED_CHECKSUM_PATH }}
 
   publish-release:
     name: Publish GitHub Release
