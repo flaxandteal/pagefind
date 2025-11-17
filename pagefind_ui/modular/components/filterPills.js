@@ -18,7 +18,10 @@ export class FilterPills {
         this.ordering = opts.ordering ?? null;
         this.alwaysShow = opts.alwaysShow ?? false;
         this.selectMultiple = opts.selectMultiple ?? false;
-        this.pillInner = opts.pillInner ?? this.defaultPillInner;
+        this.pillInner = this.defaultPillInner;
+        if (opts.pillInner) {
+            this.pillInner = opts.pillInner.bind(this);
+        }
         this.makeFilterElement = opts.makeFilterElement ?? (
             () => new El("button")
                 .class("pagefind-modular-filter-pill")

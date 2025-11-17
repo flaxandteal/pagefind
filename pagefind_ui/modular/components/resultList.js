@@ -145,11 +145,13 @@ export class ResultList {
             if (!this.containerEl) return;
             this.containerEl.innerHTML = "";
             this.intersectionEl = nearestScrollParent(this.containerEl);
-            this.results = results.results.map(r => {
-                let placeholderNodes = templateNodes(this.placeholderTemplate());
+            Promise.all(results.results.map(async r => {
+                let placeholderNodes = templateNodes(await this.placeholderTemplate());
                 this.append(placeholderNodes);
                 return new Result({ result: r, placeholderNodes, resultFn: this.resultTemplate, intersectionEl: this.intersectionEl });
-            })
+            })).then(results => {
+                this.results = results;
+            });
         });
 
         instance.on("loading", () => {
