@@ -132,6 +132,10 @@ jobs:
         working-directory: ./pagefind_ui/modular
         run: npm i && npm run build
 
+      - name: Build Playground
+        working-directory: ./pagefind_playground
+        run: npm i && npm run build
+
       - name: Build
         working-directory: ./pagefind
         run: cargo build --release --target ${{ matrix.target }} --features extended
