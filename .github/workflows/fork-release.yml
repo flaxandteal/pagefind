@@ -305,7 +305,7 @@ jobs:
       - name: Update Version
         run: |
           node ./.backstage/version.cjs
-          git add ./pagefind_ui/modular/package.json
+          git add -A
           git commit -m "Update modular UI version"
 
       - name: Build Modular UI
@@ -352,7 +352,7 @@ jobs:
       - name: Update Version
         run: |
           node ./.backstage/version.cjs
-          git add ./wrappers/node/package.json
+          git add -A
           git commit -m "Update node wrapper version"
 
       - name: Create Tarball
