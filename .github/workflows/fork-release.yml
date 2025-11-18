@@ -326,10 +326,53 @@ jobs:
           name: modular-ui-package
           path: ${{ env.MODULAR_UI_ASSET_PATH }}
 
+  build-node-wrapper:
+    name: Build Node Wrapper Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Get Version
+        run: echo GIT_VERSION="$(git describe --tags | sed 's/^v\(.*\)$/\1/')" >> $GITHUB_ENV
+
+      - name: Prepare Git
+        run: |
+          git config user.email "github@github.com"
+          git config user.name "Github Actions"
+          git checkout -b main
+          git checkout -b deploy_branch
+
+      - name: Update Version
+        run: |
+          node ./.backstage/version.cjs
+          git add ./wrappers/node/package.json
+          git commit -m "Update node wrapper version"
+
+      - name: Create Tarball
+        run: |
+          cd wrappers/node
+          ASSET_PATH="pagefind-node-wrapper-v$GIT_VERSION.tar.gz"
+          tar czf ../../$ASSET_PATH --exclude=node_modules --exclude=.git .
+          cd ../..
+          echo "NODE_WRAPPER_ASSET_PATH=$ASSET_PATH" >> $GITHUB_ENV
+
+      - name: Upload Node Wrapper artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-wrapper-package
+          path: ${{ env.NODE_WRAPPER_ASSET_PATH }}
+
   publish-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
-    needs: [test-and-build, build-modular-ui]
+    needs: [test-and-build, build-modular-ui, build-node-wrapper]
     permissions:
       contents: write
     steps:
