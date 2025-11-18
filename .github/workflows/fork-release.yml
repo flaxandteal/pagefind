@@ -382,10 +382,17 @@ jobs:
       - name: Get Version
         run: echo GIT_VERSION="$(git describe --tags | sed 's/^v\(.*\)$/\1/')" >> $GITHUB_ENV
 
-      - name: Download artifacts
+      - name: Download binary artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: release-*
+          merge-multiple: true
+          path: build-artifacts
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-package'
           merge-multiple: true
           path: build-artifacts
 
