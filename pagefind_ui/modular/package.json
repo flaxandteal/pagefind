@@ -6,7 +6,8 @@
   "module": "npm_dist/mjs/modular-core.mjs",
   "scripts": {
     "start": "PAGEFIND_DEV=true node ./build.js",
-    "build": "node ./build.js"
+    "build": "node ./build.js",
+    "prepare": "npm run build"
   },
   "author": "Cloudcannon",
   "license": "MIT",
