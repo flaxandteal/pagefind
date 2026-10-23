@@ -280,8 +280,8 @@ const getFiles = (indexId) => new Promise((resolve, reject) => {
 
 /**
  * @typedef {import ('pagefindService').GetIndexCatalogueResponse} GetIndexCatalogueResponse
- * 
- * @param {number} indexId 
+ *
+ * @param {number} indexId
  * @returns {Promise<GetIndexCatalogueResponse>}
  */
 const getIndexCatalogue = (indexId) => new Promise((resolve, reject) => {

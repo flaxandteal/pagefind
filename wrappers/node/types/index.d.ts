@@ -234,6 +234,7 @@ declare function deleteIndex(): Promise<null>;
 declare function getIndexCatalogue(): Promise<GetIndexCatalogueResponse>;
 
 export interface GetIndexCatalogueResponse {
-    entries: [string, string][]
+    errors: string[],
+    entries: [string, string][],
     entryCount: number
 }
