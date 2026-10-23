@@ -11,7 +11,7 @@ steps:
 
        const run = async () => {
            const { index } = await pagefind.createIndex();
-           await index.addHTMLFile({sourcePath: "dogs/index.html", content: "<html><body><h1>Dogs</h1></body></html>"});
+           await index.addHTMLFile({sourcePath: "dogs/index.html", content: "<html><body data-pagefind-meta=\"town:Belfast\"><h1 data-pagefind-meta=\"title\">Dogs</h1><span data-pagefind-filter=\"kind:hound\"></span></body></html>"});
            await index.addHTMLFile({sourcePath: "cats/index.html", content: "<html><body><h1>Cats</h1></body></html>"});
            const { entries, entryCount, errors } = await index.getIndexCatalogue();
 
@@ -19,6 +19,11 @@ steps:
            console.log(`${entryCount} entries`);
            console.log(`${entries.length} entry pairs`);
            console.log(`${entries.filter(([hash, data]) => hash.length > 0 && data.length > 0).length} populated`);
+
+           const dogs = entries.map(([hash, data]) => JSON.parse(data)).find(fragment => fragment.url === "/dogs/");
+           console.log(`dogs url ${dogs.url}`);
+           console.log(`dogs meta ${JSON.stringify(dogs.meta)}`);
+           console.log(`dogs filters ${JSON.stringify(dogs.filters)}`);
        }
 
        run();
@@ -27,3 +32,8 @@ steps:
   - step: stdout should contain "2 entries"
   - step: stdout should contain "2 entry pairs"
   - step: stdout should contain "2 populated"
+  - step: stdout should contain "dogs url /dogs/"
+  - step: stdout should contain {meta}
+    meta: 'dogs meta {"title":"Dogs","town":"Belfast"}'
+  - step: stdout should contain {filters}
+    filters: 'dogs filters {"kind":["hound"]}'
