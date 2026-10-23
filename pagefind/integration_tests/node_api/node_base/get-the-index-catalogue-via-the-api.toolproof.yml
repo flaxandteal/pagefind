@@ -1,0 +1,29 @@
+name: Node API Base Tests > Get the index catalogue via the api
+platforms:
+  - linux
+  - mac
+
+steps:
+  - ref: ./background.toolproof.yml
+  - step: I have a "public/index.js" file with the content {js}
+    js: |2-
+       import * as pagefind from "pagefind";
+
+       const run = async () => {
+           const { index } = await pagefind.createIndex();
+           await index.addHTMLFile({sourcePath: "dogs/index.html", content: "<html><body><h1>Dogs</h1></body></html>"});
+           await index.addHTMLFile({sourcePath: "cats/index.html", content: "<html><body><h1>Cats</h1></body></html>"});
+           const { entries, entryCount, errors } = await index.getIndexCatalogue();
+
+           console.log(`${errors.length} error(s)`);
+           console.log(`${entryCount} entries`);
+           console.log(`${entries.length} entry pairs`);
+           console.log(`${entries.filter(([hash, data]) => hash.length > 0 && data.length > 0).length} populated`);
+       }
+
+       run();
+  - macro: I run Pagefind Node as "index.js" in "public"
+  - step: stdout should contain "0 error(s)"
+  - step: stdout should contain "2 entries"
+  - step: stdout should contain "2 entry pairs"
+  - step: stdout should contain "2 populated"
