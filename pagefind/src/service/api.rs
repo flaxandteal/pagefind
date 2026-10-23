@@ -222,6 +222,14 @@ impl PagefindIndex {
         state.build_indexes().await?;
         Ok(state.get_files().await)
     }
+
+    /// Build the search index for this instance and return the
+    /// (hash, encoded fragment) pair of every page, without writing any files.
+    pub async fn get_index_catalogue(&mut self) -> Result<Vec<(String, String)>> {
+        let mut state = self.search_index.lock().await;
+        state.build_indexes().await?;
+        Ok(state.get_index_catalogue())
+    }
 }
 
 #[cfg(test)]

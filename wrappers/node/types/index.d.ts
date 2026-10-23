@@ -74,6 +74,7 @@ export interface PagefindIndex {
     writeFiles: typeof writeFiles,
     getFiles: typeof getFiles,
     deleteIndex: typeof deleteIndex,
+    getIndexCatalogue: typeof getIndexCatalogue,
 }
 
 /**
@@ -225,3 +226,14 @@ export interface IndexFile {
  * Delete this index and clear it from memory
  */
 declare function deleteIndex(): Promise<null>;
+
+/**
+ * Build the index and return the hash and encoded fragment of every page,
+ * without writing any files
+ */
+declare function getIndexCatalogue(): Promise<GetIndexCatalogueResponse>;
+
+export interface GetIndexCatalogueResponse {
+    entries: [string, string][]
+    entryCount: number
+}

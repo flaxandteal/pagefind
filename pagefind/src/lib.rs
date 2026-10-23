@@ -336,6 +336,14 @@ impl SearchState {
         outdir
     }
 
+    /// The (hash, encoded fragment) pair for every page in the built indexes.
+    pub fn get_index_catalogue(&self) -> Vec<(String, String)> {
+        self.built_indexes
+            .iter()
+            .flat_map(|indexes| indexes.fragments.clone())
+            .collect()
+    }
+
     pub async fn get_files(&self) -> Vec<SyntheticFile> {
         let outdir = &self.options.bundle_output;
 

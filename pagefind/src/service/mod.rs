@@ -222,6 +222,17 @@ pub async fn run_service() {
                     }
                 }
             }
+            RequestAction::GetIndexCatalogue { index_id } => {
+                if let Some(index) = get_index(&mut indexes, index_id, err) {
+                    match index.get_index_catalogue().await {
+                        Ok(entries) => send(ResponseAction::GetIndexCatalogue {
+                            entry_count: entries.len(),
+                            entries,
+                        }),
+                        Err(e) => err(&e.to_string()),
+                    }
+                }
+            }
             RequestAction::GetFiles { index_id } => {
                 if let Some(index) = get_index(&mut indexes, index_id, err) {
                     match index.build_indexes().await {
